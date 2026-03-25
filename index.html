@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -671,6 +672,13 @@
 </div>
 
 <script>
+// 🔥 Supabase setup
+const SUPABASE_URL = "https://fdufltxylxoemuqvoeej.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_sy69DPFEsPgkXKZwOXMFUw_XGUF59d1";
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// TEMP: keep local DB for fallback
 const DB = {
   recipes: JSON.parse(localStorage.getItem('bbq_recipes') || '[]'),
   lessons: JSON.parse(localStorage.getItem('bbq_lessons') || '[]'),
@@ -722,12 +730,13 @@ function clearForms() {
 }
 
 // -------- SAVE --------
-function saveRecipe() {
+async function saveRecipe() {
   const name = document.getElementById('r-name').value.trim();
   if (!name) { alert('Please enter a recipe name.'); return; }
-  DB.recipes.unshift({
-    id: Date.now(), type: 'recipe',
-    name, meat: document.getElementById('r-meat').value,
+
+  const newRecipe = {
+    name,
+    meat: document.getElementById('r-meat').value,
     method: document.getElementById('r-method').value,
     temp: document.getElementById('r-temp').value,
     internal: document.getElementById('r-internal').value,
@@ -737,8 +746,19 @@ function saveRecipe() {
     notes: document.getElementById('r-notes').value,
     tags: document.getElementById('r-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
     date: new Date().toISOString()
-  });
-  save(); closeModal(); renderRecipes();
+  };
+
+  const { data, error } = await supabaseClient
+    .from('recipes')
+    .insert([newRecipe]);
+
+  if (error) {
+    alert("Error saving: " + error.message);
+    return;
+  }
+
+  closeModal();
+  loadRecipesFromDB(); // new function
 }
 
 function saveLesson() {
@@ -1016,8 +1036,25 @@ function goToDetail(type, idx) {
   setTimeout(() => openDetail(type, idx), 50);
 }
 
+async function loadRecipesFromDB() {
+  const { data, error } = await supabaseClient
+    .from('recipes')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  DB.recipes = data;
+  renderRecipes();
+}
+
 // Init
-renderRecipes(); renderLessons(); renderCooks();
+loadRecipesFromDB();
+renderLessons();
+renderCooks();
 </script>
 </body>
 </html>
