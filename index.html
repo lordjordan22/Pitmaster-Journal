@@ -678,6 +678,36 @@ const SUPABASE_ANON_KEY = "sb_publishable_sy69DPFEsPgkXKZwOXMFUw_XGUF59d1";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ===== LOGIN FUNCTION =====
+async function login(email, password) {
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    alert("Login failed: " + error.message);
+    return;
+  }
+  console.log("Logged in user:", data.user);
+  // Now that user is logged in, load recipes from DB
+  loadRecipesFromDB();
+}
+
+// Check if user is already logged in
+supabaseClient.auth.getSession().then(({ data: { session } }) => {
+  if (session) {
+    console.log("Already logged in:", session.user);
+    loadRecipesFromDB();
+  } else {
+    console.log("No active session. User must log in.");
+  }
+});
+
+// Optional: attach login to a form
+document.getElementById('login-form')?.addEventListener('submit', e => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  login(email, password);
+});
+
 // TEMP: keep local DB for fallback
 const DB = {
   recipes: JSON.parse(localStorage.getItem('bbq_recipes') || '[]'),
@@ -704,6 +734,21 @@ function showSection(id) {
   if (id === 'cooks')   renderCooks();
   if (id === 'search')  doSearch();
 }
+
+// ===== DB LOAD FUNCTION =====
+async function loadRecipesFromDB() {
+  const { data, error } = await supabaseClient
+    .from('recipes')
+    .select('*');
+  if (error) {
+    console.error("Failed to load recipes:", error.message);
+    return;
+  }
+  DB.recipes = data;
+  save();
+  renderRecipes();
+}
+</script>
 
 // -------- MODAL --------
 let currentModal = null;
