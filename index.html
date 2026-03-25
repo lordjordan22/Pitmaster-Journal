@@ -4,158 +4,136 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PitMaster Journal</title>
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- Basic CSS Reset -->
   <style>
-    body { font-family: 'Source Sans 3', sans-serif; background: #1e1c1b; color: #fff; margin:0; }
-    header { padding: 1rem; background: #111; display:flex; justify-content:space-between; align-items:center; }
-    nav a { margin-right: 1rem; color:#aaa; text-decoration:none; }
-    nav a.active { color:#f06500; }
-    .section { display:none; padding:1rem; }
-    .section.active { display:block; }
-    button { cursor:pointer; }
-    .recipe-card { background:#222; padding:1rem; margin-bottom:1rem; border-radius:6px; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Source Sans 3', sans-serif;
+    }
+    body {
+      background-color: #fafafa;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 900;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #0070f3;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #005bb5;
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <div>
+  <header>
     <h1>PitMaster Journal</h1>
-  </div>
-  <nav>
-    <a href="#" class="nav-btn active" onclick="showSection('recipes', event)">Recipes</a>
-    <a href="#" class="nav-btn" onclick="showSection('lessons', event)">Lessons Learned</a>
-    <a href="#" class="nav-btn" onclick="showSection('cooks', event)">Cook Reports</a>
-    <a href="#" class="nav-btn" onclick="showSection('search', event)">Search</a>
-    <button id="login-btn">Login</button>
-    <button id="logout-btn" style="display:none;">Logout</button>
-  </nav>
-</header>
+    <p>Track your BBQ experiments, lessons, and recipes.</p>
+  </header>
 
-<main>
-  <section id="sec-recipes" class="section active">
-    <h2>Recipes (<span id="recipe-count">0</span>)</h2>
-    <div id="recipes-cards"></div>
-    <button onclick="openAddRecipe()">+ Add Recipe</button>
-  </section>
+  <main>
+    <section id="add-entry">
+      <h2>Add New Entry</h2>
+      <input type="text" id="entry-title" placeholder="Title" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+      <textarea id="entry-content" placeholder="Your notes..." style="width: 100%; padding: 8px; height: 100px;"></textarea>
+      <button id="save-entry">Save Entry</button>
+    </section>
 
-  <section id="sec-lessons" class="section">
-    <h2>Lessons Learned (<span id="lessons-count">0</span>)</h2>
-    <div id="lessons-cards"></div>
-  </section>
+    <section id="entries-list">
+      <h2>Your Entries</h2>
+      <ul id="entries" style="list-style: none; padding-left: 0;"></ul>
+    </section>
+  </main>
 
-  <section id="sec-cooks" class="section">
-    <h2>Cook Reports (<span id="cooks-count">0</span>)</h2>
-    <div id="cooks-cards"></div>
-  </section>
+  <!-- Supabase Setup -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+  <script>
+    // 🔥 Supabase setup
+    const SUPABASE_URL = "https://fdufltxylxoemuqvoeej.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_sy69DPFEsPgkXKZwOXMFUw_XGUF59d1";
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  <section id="sec-search" class="section">
-    <h2>Search</h2>
-    <div id="search-results"></div>
-  </section>
-</main>
+    const saveButton = document.getElementById('save-entry');
+    const entriesList = document.getElementById('entries');
 
-<!-- Add your forms/modals here -->
+    saveButton.addEventListener('click', async () => {
+      const title = document.getElementById('entry-title').value;
+      const content = document.getElementById('entry-content').value;
 
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+      if (!title || !content) {
+        alert('Please enter both title and content.');
+        return;
+      }
 
-  const SUPABASE_URL = "https://fdufltxylxoemuqvoeej.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_sy69DPFEsPgkXKZwOXMFUw_XGUF59d1";
-  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // Insert entry into Supabase
+      const { data, error } = await supabase
+        .from('entries')
+        .insert([{ title, content }]);
 
-  const DB = { recipes: [], lessons: [], cooks: [] };
+      if (error) {
+        console.error('Error saving entry:', error);
+      } else {
+        alert('Entry saved!');
+        loadEntries();
+      }
+    });
 
-  const loginBtn = document.getElementById('login-btn');
-  const logoutBtn = document.getElementById('logout-btn');
+    async function loadEntries() {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .order('id', { ascending: false });
 
-  async function login() {
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({ provider: 'github' });
-    if (error) alert(error.message);
-  }
+      if (error) {
+        console.error('Error loading entries:', error);
+        return;
+      }
 
-  async function logout() {
-    await supabaseClient.auth.signOut();
-    loginBtn.style.display = 'inline-block';
-    logoutBtn.style.display = 'none';
-    alert('Logged out');
-  }
-
-  loginBtn.addEventListener('click', login);
-  logoutBtn.addEventListener('click', logout);
-
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (session?.user) {
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      loadData();
-    } else {
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
+      entriesList.innerHTML = '';
+      data.forEach(entry => {
+        const li = document.createElement('li');
+        li.style.padding = '10px 0';
+        li.style.borderBottom = '1px solid #eee';
+        li.innerHTML = `<strong>${entry.title}</strong><p>${entry.content}</p>`;
+        entriesList.appendChild(li);
+      });
     }
-  });
 
-  function showSection(id, event) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('sec-' + id).classList.add('active');
-    event.currentTarget.classList.add('active');
-  }
-
-  async function loadData() {
-    const { data: recipes } = await supabaseClient.from('recipes').select('*');
-    const { data: lessons } = await supabaseClient.from('lessons').select('*');
-    const { data: cooks } = await supabaseClient.from('cooks').select('*');
-
-    DB.recipes = recipes || [];
-    DB.lessons = lessons || [];
-    DB.cooks = cooks || [];
-
-    renderRecipes();
-    renderLessons();
-    renderCooks();
-  }
-
-  function renderRecipes() {
-    document.getElementById('recipe-count').textContent = DB.recipes.length;
-    const container = document.getElementById('recipes-cards');
-    container.innerHTML = DB.recipes.map(r => `
-      <div class="recipe-card">
-        <h3>${r.name}</h3>
-        <p>${r.instructions || ''}</p>
-      </div>
-    `).join('');
-  }
-
-  function renderLessons() {
-    document.getElementById('lessons-count').textContent = DB.lessons.length;
-    const container = document.getElementById('lessons-cards');
-    container.innerHTML = DB.lessons.map(l => `<div>${l.title}</div>`).join('');
-  }
-
-  function renderCooks() {
-    document.getElementById('cooks-count').textContent = DB.cooks.length;
-    const container = document.getElementById('cooks-cards');
-    container.innerHTML = DB.cooks.map(c => `<div>${c.name}</div>`).join('');
-  }
-
-  function openAddRecipe() {
-    if (!supabaseClient.auth.getSession()) {
-      alert('You must be logged in to add a recipe');
-      return;
-    }
-    const name = prompt('Recipe name:');
-    if (!name) return;
-    saveRecipe({ name });
-  }
-
-  async function saveRecipe(recipe) {
-    const { error } = await supabaseClient.from('recipes').insert([recipe]);
-    if (error) return alert(error.message);
-    DB.recipes.push(recipe);
-    renderRecipes();
-  }
-</script>
+    // Load entries on page load
+    loadEntries();
+  </script>
 
 </body>
 </html>
