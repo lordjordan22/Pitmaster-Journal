@@ -1,1105 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PitMaster Journal</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --char: #1a1714;
-    --ash: #2c2925;
-    --smoke: #3d3830;
-    --ember: #c0440e;
-    --ember-hot: #e85d1a;
-    --ember-glow: #f5813a;
-    --cream: #f0e8d8;
-    --parchment: #e8dcc8;
-    --muted: #9c9080;
-    --text: #f0e8d8;
-    --text-dim: #b8a890;
-    --border: rgba(240,232,216,0.1);
-    --border-mid: rgba(240,232,216,0.18);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--char);
-    color: var(--text);
-    font-family: 'Source Sans 3', sans-serif;
-    font-weight: 300;
-    min-height: 100vh;
-    background-image:
-      radial-gradient(ellipse 80% 40% at 50% 0%, rgba(192,68,14,0.08) 0%, transparent 70%),
-      repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.008) 60px, rgba(255,255,255,0.008) 61px);
-  }
-
-  /* HEADER */
-  header {
-    padding: 2rem 2rem 0;
-    border-bottom: 1px solid var(--border);
-    background: rgba(26,23,20,0.9);
-    position: sticky; top: 0; z-index: 100;
-    backdrop-filter: blur(8px);
-  }
-  .header-top {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 1.5rem;
-  }
-  .logo {
-    display: flex; align-items: baseline; gap: 10px;
-  }
-  .logo-mark {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px; font-weight: 900;
-    color: var(--ember-glow);
-    letter-spacing: -1px;
-  }
-  .logo-sub {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; color: var(--muted);
-    letter-spacing: 3px; text-transform: uppercase;
-  }
-  nav {
-    display: flex; gap: 0;
-  }
-  .nav-btn {
-    background: none; border: none; cursor: pointer;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted);
-    padding: 0.6rem 1.2rem;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-  }
-  .nav-btn:hover { color: var(--text); }
-  .nav-btn.active {
-    color: var(--ember-glow);
-    border-bottom-color: var(--ember-glow);
-  }
-
-  /* MAIN */
-  main { padding: 2rem; max-width: 960px; margin: 0 auto; }
-
-  /* SECTIONS */
-  .section { display: none; }
-  .section.active { display: block; }
-
-  /* PAGE TITLE */
-  .page-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 36px; font-weight: 700;
-    color: var(--cream);
-    margin-bottom: 0.25rem;
-  }
-  .page-sub {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; color: var(--muted);
-    letter-spacing: 2px; text-transform: uppercase;
-    margin-bottom: 2rem;
-  }
-
-  /* CARDS GRID */
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-    margin-top: 1.5rem;
-  }
-
-  .card {
-    background: var(--ash);
-    border: 1px solid var(--border-mid);
-    border-radius: 4px;
-    padding: 1.25rem;
-    cursor: pointer;
-    transition: border-color 0.2s, transform 0.15s;
-    position: relative;
-  }
-  .card:hover {
-    border-color: rgba(232,93,26,0.4);
-    transform: translateY(-1px);
-  }
-  .card-tag {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--ember); margin-bottom: 0.5rem;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .card-tag::before {
-    content: '';
-    display: inline-block; width: 6px; height: 6px;
-    background: var(--ember); border-radius: 50%;
-  }
-  .card-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 18px; font-weight: 700; color: var(--cream);
-    margin-bottom: 0.5rem; line-height: 1.3;
-  }
-  .card-meta {
-    font-size: 13px; color: var(--text-dim);
-    margin-bottom: 0.6rem;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-  .card-body {
-    font-size: 14px; color: var(--text-dim); line-height: 1.6;
-  }
-  .card-footer {
-    margin-top: 1rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .tag-pill {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; background: var(--smoke);
-    border: 1px solid var(--border-mid);
-    color: var(--muted); padding: 2px 8px; border-radius: 2px;
-    letter-spacing: 1px; text-transform: uppercase;
-  }
-  .tag-pill.hot { border-color: rgba(192,68,14,0.4); color: var(--ember); }
-  .rating {
-    color: var(--ember-glow); font-size: 13px; letter-spacing: 1px;
-  }
-
-  /* ADD FORM */
-  .add-bar {
-    display: flex; gap: 0.75rem; margin-bottom: 1.5rem;
-  }
-  .btn-add {
-    background: var(--ember);
-    border: none; cursor: pointer;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--cream); padding: 0.65rem 1.4rem; border-radius: 2px;
-    transition: background 0.2s;
-  }
-  .btn-add:hover { background: var(--ember-hot); }
-
-  /* MODAL OVERLAY */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(10,9,8,0.85);
-    z-index: 200; align-items: center; justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--ash);
-    border: 1px solid var(--border-mid);
-    border-radius: 4px;
-    width: min(680px, 94vw);
-    max-height: 88vh;
-    overflow-y: auto;
-    padding: 2rem;
-  }
-  .modal-header {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    margin-bottom: 1.5rem;
-  }
-  .modal-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px; font-weight: 700; color: var(--cream);
-  }
-  .btn-close {
-    background: none; border: none; cursor: pointer;
-    font-size: 20px; color: var(--muted); line-height: 1;
-    transition: color 0.2s;
-  }
-  .btn-close:hover { color: var(--cream); }
-
-  /* FORM ELEMENTS */
-  .form-row { margin-bottom: 1.2rem; }
-  .form-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted); display: block; margin-bottom: 0.4rem;
-  }
-  .form-input, .form-textarea, .form-select {
-    width: 100%;
-    background: var(--smoke);
-    border: 1px solid var(--border-mid);
-    border-radius: 2px;
-    padding: 0.6rem 0.9rem;
-    color: var(--text);
-    font-family: 'Source Sans 3', sans-serif;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .form-input:focus, .form-textarea:focus, .form-select:focus {
-    border-color: rgba(232,93,26,0.5);
-  }
-  .form-textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
-  .form-select option { background: var(--ash); }
-  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-
-  .modal-actions {
-    display: flex; justify-content: flex-end; gap: 0.75rem;
-    margin-top: 1.5rem; padding-top: 1.25rem;
-    border-top: 1px solid var(--border);
-  }
-  .btn-cancel {
-    background: none; border: 1px solid var(--border-mid);
-    cursor: pointer; font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted); padding: 0.65rem 1.2rem; border-radius: 2px;
-    transition: all 0.2s;
-  }
-  .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
-
-  /* SEARCH SECTION */
-  .search-bar-wrap { position: relative; margin-bottom: 2rem; }
-  .search-input {
-    width: 100%;
-    background: var(--ash);
-    border: 1px solid var(--border-mid);
-    border-radius: 2px;
-    padding: 0.9rem 1.2rem 0.9rem 3rem;
-    color: var(--text);
-    font-family: 'Source Sans 3', sans-serif;
-    font-size: 16px; outline: none;
-    transition: border-color 0.2s;
-  }
-  .search-input:focus { border-color: rgba(232,93,26,0.5); }
-  .search-icon {
-    position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
-    color: var(--muted); font-size: 18px; pointer-events: none;
-  }
-  .search-filters {
-    display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;
-  }
-  .filter-btn {
-    background: var(--ash); border: 1px solid var(--border-mid);
-    cursor: pointer; font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted); padding: 0.4rem 0.9rem; border-radius: 2px;
-    transition: all 0.2s;
-  }
-  .filter-btn:hover, .filter-btn.active {
-    background: rgba(192,68,14,0.15);
-    border-color: rgba(192,68,14,0.4); color: var(--ember-glow);
-  }
-  .search-result-type {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--ember); margin: 1.5rem 0 0.75rem;
-    padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
-  }
-  .no-results {
-    text-align: center; padding: 4rem 2rem;
-    color: var(--muted); font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px; letter-spacing: 1px;
-  }
-
-  /* STATS ROW */
-  .stats-row {
-    display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;
-  }
-  .stat-box {
-    background: var(--ash); border: 1px solid var(--border);
-    border-radius: 2px; padding: 1rem 1.5rem; flex: 1; min-width: 100px;
-  }
-  .stat-num {
-    font-family: 'Playfair Display', serif;
-    font-size: 32px; font-weight: 700; color: var(--ember-glow);
-    line-height: 1;
-  }
-  .stat-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted); margin-top: 4px;
-  }
-
-  /* DETAIL VIEW */
-  .detail-back {
-    background: none; border: none; cursor: pointer;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted); padding: 0; margin-bottom: 1.5rem;
-    display: flex; align-items: center; gap: 6px;
-    transition: color 0.2s;
-  }
-  .detail-back:hover { color: var(--text); }
-  .detail-view { display: none; }
-  .detail-view.open { display: block; }
-  .list-view { display: block; }
-  .list-view.hidden { display: none; }
-
-  .detail-full {
-    background: var(--ash); border: 1px solid var(--border-mid);
-    border-radius: 4px; padding: 2rem;
-  }
-  .detail-header {
-    margin-bottom: 1.5rem; padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .detail-tag {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--ember); margin-bottom: 0.5rem;
-  }
-  .detail-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px; font-weight: 700; color: var(--cream);
-    line-height: 1.3; margin-bottom: 0.5rem;
-  }
-  .detail-meta {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; color: var(--text-dim);
-    display: flex; gap: 1.5rem; flex-wrap: wrap;
-  }
-  .detail-body {
-    font-size: 15px; line-height: 1.8; color: var(--text-dim);
-    white-space: pre-line;
-  }
-  .detail-section-title {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted); margin: 1.5rem 0 0.75rem;
-  }
-
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center; padding: 5rem 2rem;
-    border: 1px dashed rgba(240,232,216,0.12);
-    border-radius: 4px;
-  }
-  .empty-icon {
-    font-size: 40px; margin-bottom: 1rem; opacity: 0.4;
-  }
-  .empty-text {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  @media (max-width: 600px) {
-    main { padding: 1rem; }
-    header { padding: 1rem 1rem 0; }
-    .nav-btn { padding: 0.5rem 0.75rem; font-size: 10px; }
-    .form-row-2 { grid-template-columns: 1fr; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PitMaster Journal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Source Sans 3', sans-serif; margin: 0; padding: 0; background:#f9f9f9; }
+    .hidden { display: none; }
+    .section { display: none; padding: 20px; }
+    .section.active { display: block; }
+    .nav-btn.active { font-weight: bold; }
+    #login-container { padding: 40px; max-width: 400px; margin: 50px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
+    #login-container input { display:block; width: 100%; margin-bottom: 10px; padding: 10px; }
+    #login-container button { padding: 10px; width: 100%; }
+  </style>
 </head>
 <body>
 
-<header>
-  <div class="header-top">
-    <div class="logo">
-      <span class="logo-mark">PitMaster</span>
-      <span class="logo-sub">Journal</span>
-    </div>
+  <!-- LOGIN FORM -->
+  <div id="login-container">
+    <h2>Login to PitMaster Journal</h2>
+    <form id="login-form">
+      <input type="email" id="login-email" placeholder="Email" required>
+      <input type="password" id="login-password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
   </div>
-  <nav>
-    <button class="nav-btn active" onclick="showSection('recipes')">Recipes</button>
-    <button class="nav-btn" onclick="showSection('lessons')">Lessons Learned</button>
-    <button class="nav-btn" onclick="showSection('cooks')">Cook Reports</button>
+
+  <!-- NAVIGATION -->
+  <nav class="hidden" id="main-nav">
+    <button class="nav-btn" onclick="showSection('recipes')">Recipes</button>
+    <button class="nav-btn" onclick="showSection('lessons')">Lessons</button>
+    <button class="nav-btn" onclick="showSection('cooks')">Cooks</button>
     <button class="nav-btn" onclick="showSection('search')">Search</button>
   </nav>
-</header>
 
-<main>
+  <!-- SECTIONS -->
+  <div id="sec-recipes" class="section"></div>
+  <div id="sec-lessons" class="section"></div>
+  <div id="sec-cooks" class="section"></div>
+  <div id="sec-search" class="section"></div>
 
-  <!-- RECIPES SECTION -->
-  <div id="sec-recipes" class="section active">
-    <div class="list-view" id="recipes-list">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:0.25rem;">
-        <h1 class="page-title">Recipes</h1>
-        <button class="btn-add" onclick="openModal('recipe')">+ Add Recipe</button>
-      </div>
-      <p class="page-sub">Your BBQ playbook</p>
-      <div id="recipes-stats" class="stats-row"></div>
-      <div id="recipes-cards" class="cards-grid"></div>
-    </div>
-    <div class="detail-view" id="recipe-detail">
-      <button class="detail-back" onclick="closeDetail('recipe')">&#8592; Back to Recipes</button>
-      <div id="recipe-detail-content" class="detail-full"></div>
-    </div>
-  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // 🔥 Supabase setup
+    const SUPABASE_URL = "https://fdufltxylxoemuqvoeej.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_sy69DPFEsPgkXKZwOXMFUw_XGUF59d1";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  <!-- LESSONS SECTION -->
-  <div id="sec-lessons" class="section">
-    <div class="list-view" id="lessons-list">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:0.25rem;">
-        <h1 class="page-title">Lessons Learned</h1>
-        <button class="btn-add" onclick="openModal('lesson')">+ Add Lesson</button>
-      </div>
-      <p class="page-sub">Hard-won pit wisdom</p>
-      <div id="lessons-stats" class="stats-row"></div>
-      <div id="lessons-cards" class="cards-grid"></div>
-    </div>
-    <div class="detail-view" id="lesson-detail">
-      <button class="detail-back" onclick="closeDetail('lesson')">&#8592; Back to Lessons</button>
-      <div id="lesson-detail-content" class="detail-full"></div>
-    </div>
-  </div>
+    // ===== LOCAL DB FALLBACK =====
+    const DB = {
+      recipes: JSON.parse(localStorage.getItem('bbq_recipes') || '[]'),
+      lessons: JSON.parse(localStorage.getItem('bbq_lessons') || '[]'),
+      cooks: JSON.parse(localStorage.getItem('bbq_cooks') || '[]'),
+    };
+    function save() {
+      localStorage.setItem('bbq_recipes', JSON.stringify(DB.recipes));
+      localStorage.setItem('bbq_lessons', JSON.stringify(DB.lessons));
+      localStorage.setItem('bbq_cooks', JSON.stringify(DB.cooks));
+    }
 
-  <!-- COOK REPORTS SECTION -->
-  <div id="sec-cooks" class="section">
-    <div class="list-view" id="cooks-list">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:0.25rem;">
-        <h1 class="page-title">Cook Reports</h1>
-        <button class="btn-add" onclick="openModal('cook')">+ Log Cook</button>
-      </div>
-      <p class="page-sub">Every cook, documented</p>
-      <div id="cooks-stats" class="stats-row"></div>
-      <div id="cooks-cards" class="cards-grid"></div>
-    </div>
-    <div class="detail-view" id="cook-detail">
-      <button class="detail-back" onclick="closeDetail('cook')">&#8592; Back to Cook Reports</button>
-      <div id="cook-detail-content" class="detail-full"></div>
-    </div>
-  </div>
+    let currentSection = 'recipes';
+    let searchFilter = 'all';
 
-  <!-- SEARCH SECTION -->
-  <div id="sec-search" class="section">
-    <h1 class="page-title">Search</h1>
-    <p class="page-sub">Everything in one place</p>
-    <div class="search-bar-wrap">
-      <span class="search-icon">&#128269;</span>
-      <input type="text" class="search-input" id="search-input" placeholder="Search recipes, lessons, cook reports..." oninput="doSearch()">
-    </div>
-    <div class="search-filters">
-      <button class="filter-btn active" onclick="toggleFilter(this,'all')">All</button>
-      <button class="filter-btn" onclick="toggleFilter(this,'recipe')">Recipes</button>
-      <button class="filter-btn" onclick="toggleFilter(this,'lesson')">Lessons</button>
-      <button class="filter-btn" onclick="toggleFilter(this,'cook')">Cook Reports</button>
-    </div>
-    <div id="search-results"></div>
-  </div>
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('sec-' + id).classList.add('active');
+      event.currentTarget?.classList.add('active');
+      currentSection = id;
+      if (id === 'recipes') renderRecipes();
+      if (id === 'lessons') renderLessons();
+      if (id === 'cooks') renderCooks();
+      if (id === 'search') doSearch();
+    }
 
-</main>
+    // ===== LOGIN FUNCTION =====
+    async function login(email, password) {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        alert("Login failed: " + error.message);
+        return;
+      }
+      console.log("Logged in user:", data.user);
+      document.getElementById('login-container').classList.add('hidden');
+      document.getElementById('main-nav').classList.remove('hidden');
+      loadRecipesFromDB();
+    }
 
-<!-- MODALS -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+    // Check session
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log("Already logged in:", session.user);
+        document.getElementById('login-container').classList.add('hidden');
+        document.getElementById('main-nav').classList.remove('hidden');
+        loadRecipesFromDB();
+      } else {
+        console.log("No active session. User must log in.");
+      }
+    });
 
-  <!-- Recipe Modal -->
-  <div class="modal" id="modal-recipe" style="display:none">
-    <div class="modal-header">
-      <span class="modal-title">New Recipe</span>
-      <button class="btn-close" onclick="closeModal()">&#10005;</button>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Recipe Name</label>
-      <input type="text" class="form-input" id="r-name" placeholder="e.g. Competition Brisket">
-    </div>
-    <div class="form-row-2">
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Meat / Cut</label>
-        <input type="text" class="form-input" id="r-meat" placeholder="e.g. Brisket, Pork Shoulder">
-      </div>
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Cook Method</label>
-        <select class="form-select" id="r-method">
-          <option value="">Select...</option>
-          <option>Low & Slow</option><option>Hot & Fast</option><option>Reverse Sear</option>
-          <option>Smoke Roast</option><option>Direct Grill</option><option>Offset Smoke</option>
-        </select>
-      </div>
-    </div>
-    <div style="height:1rem"></div>
-    <div class="form-row-2">
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Pit Temp (°C/°F)</label>
-        <input type="text" class="form-input" id="r-temp" placeholder="e.g. 225°F / 107°C">
-      </div>
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Target Internal Temp</label>
-        <input type="text" class="form-input" id="r-internal" placeholder="e.g. 200°F / 93°C">
-      </div>
-    </div>
-    <div style="height:1rem"></div>
-    <div class="form-row">
-      <label class="form-label">Rub / Seasoning</label>
-      <input type="text" class="form-input" id="r-rub" placeholder="e.g. Salt, pepper, garlic powder, paprika">
-    </div>
-    <div class="form-row">
-      <label class="form-label">Wood / Fuel</label>
-      <input type="text" class="form-input" id="r-wood" placeholder="e.g. Post oak, cherry, hickory">
-    </div>
-    <div class="form-row">
-      <label class="form-label">Instructions</label>
-      <textarea class="form-textarea" id="r-instructions" rows="5" placeholder="Step-by-step process, timing, wrapping, resting..."></textarea>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Notes / Tips</label>
-      <textarea class="form-textarea" id="r-notes" rows="3" placeholder="Anything extra to remember..."></textarea>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Tags (comma separated)</label>
-      <input type="text" class="form-input" id="r-tags" placeholder="e.g. competition, weekend, crowd-pleaser">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-add" onclick="saveRecipe()">Save Recipe</button>
-    </div>
-  </div>
+    document.getElementById('login-form')?.addEventListener('submit', e => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      login(email, password);
+    });
 
-  <!-- Lesson Modal -->
-  <div class="modal" id="modal-lesson" style="display:none">
-    <div class="modal-header">
-      <span class="modal-title">Lesson Learned</span>
-      <button class="btn-close" onclick="closeModal()">&#10005;</button>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Title</label>
-      <input type="text" class="form-input" id="l-title" placeholder="e.g. Don't rush the stall">
-    </div>
-    <div class="form-row-2">
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Category</label>
-        <select class="form-select" id="l-category">
-          <option value="">Select...</option>
-          <option>Temperature Management</option><option>Timing</option>
-          <option>Fire / Fuel</option><option>Seasoning & Rubs</option>
-          <option>Wrapping & Resting</option><option>Equipment</option>
-          <option>Meat Selection</option><option>General</option>
-        </select>
-      </div>
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Impact</label>
-        <select class="form-select" id="l-impact">
-          <option value="">Select...</option>
-          <option value="critical">&#128308; Critical</option>
-          <option value="high">&#128992; High</option>
-          <option value="medium">&#128993; Medium</option>
-          <option value="low">&#128994; Low</option>
-        </select>
-      </div>
-    </div>
-    <div style="height:1rem"></div>
-    <div class="form-row">
-      <label class="form-label">What Happened</label>
-      <textarea class="form-textarea" id="l-what" placeholder="Describe the situation or mistake..."></textarea>
-    </div>
-    <div class="form-row">
-      <label class="form-label">The Lesson</label>
-      <textarea class="form-textarea" id="l-lesson" placeholder="What you learned and will do differently..."></textarea>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Related Cook / Date</label>
-      <input type="text" class="form-input" id="l-source" placeholder="e.g. Brisket cook March 2025">
-    </div>
-    <div class="form-row">
-      <label class="form-label">Tags (comma separated)</label>
-      <input type="text" class="form-input" id="l-tags" placeholder="e.g. brisket, temperature, rookie-mistake">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-add" onclick="saveLesson()">Save Lesson</button>
-    </div>
-  </div>
+    // ===== DB LOAD =====
+    async function loadRecipesFromDB() {
+      const { data, error } = await supabaseClient
+        .from('recipes')
+        .select('*');
+      if (error) {
+        console.error("Failed to load recipes:", error.message);
+        return;
+      }
+      DB.recipes = data;
+      save();
+      renderRecipes();
+    }
 
-  <!-- Cook Report Modal -->
-  <div class="modal" id="modal-cook" style="display:none">
-    <div class="modal-header">
-      <span class="modal-title">Cook Report</span>
-      <button class="btn-close" onclick="closeModal()">&#10005;</button>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Cook Name / Title</label>
-      <input type="text" class="form-input" id="c-name" placeholder="e.g. Bank Holiday Brisket Smoke">
-    </div>
-    <div class="form-row-2">
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Date</label>
-        <input type="date" class="form-input" id="c-date">
-      </div>
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Total Cook Time</label>
-        <input type="text" class="form-input" id="c-duration" placeholder="e.g. 14 hours">
-      </div>
-    </div>
-    <div style="height:1rem"></div>
-    <div class="form-row-2">
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Meat(s)</label>
-        <input type="text" class="form-input" id="c-meat" placeholder="e.g. 6kg brisket">
-      </div>
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Smoker / Grill</label>
-        <input type="text" class="form-input" id="c-smoker" placeholder="e.g. Offset, Kamado, Kettle">
-      </div>
-    </div>
-    <div style="height:1rem"></div>
-    <div class="form-row-2">
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Pit Temp</label>
-        <input type="text" class="form-input" id="c-temp" placeholder="e.g. 225°F">
-      </div>
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Final Internal Temp</label>
-        <input type="text" class="form-input" id="c-final-temp" placeholder="e.g. 202°F">
-      </div>
-    </div>
-    <div style="height:1rem"></div>
-    <div class="form-row">
-      <label class="form-label">How Did It Go?</label>
-      <textarea class="form-textarea" id="c-report" rows="5" placeholder="Walk through the cook — what happened, challenges, surprises..."></textarea>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Results & Tasting Notes</label>
-      <textarea class="form-textarea" id="c-results" rows="3" placeholder="Bark, smoke ring, tenderness, flavour, feedback from others..."></textarea>
-    </div>
-    <div class="form-row">
-      <label class="form-label">What I'd Change Next Time</label>
-      <textarea class="form-textarea" id="c-change" rows="3" placeholder="Tweaks, adjustments, things to try differently..."></textarea>
-    </div>
-    <div class="form-row-2">
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Overall Rating</label>
-        <select class="form-select" id="c-rating">
-          <option value="">Select...</option>
-          <option value="5">&#9733;&#9733;&#9733;&#9733;&#9733; Legendary</option>
-          <option value="4">&#9733;&#9733;&#9733;&#9733; Great</option>
-          <option value="3">&#9733;&#9733;&#9733; Solid</option>
-          <option value="2">&#9733;&#9733; Needs Work</option>
-          <option value="1">&#9733; Disaster</option>
-        </select>
-      </div>
-      <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">Tags (comma separated)</label>
-        <input type="text" class="form-input" id="c-tags" placeholder="e.g. brisket, summer, competition">
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-add" onclick="saveCook()">Save Cook Report</button>
-    </div>
-  </div>
-
-</div>
-
-<script>
-// 🔥 Supabase setup
-const SUPABASE_URL = "https://fdufltxylxoemuqvoeej.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_sy69DPFEsPgkXKZwOXMFUw_XGUF59d1";
-
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ===== LOGIN FUNCTION =====
-async function login(email, password) {
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) {
-    alert("Login failed: " + error.message);
-    return;
-  }
-  console.log("Logged in user:", data.user);
-  // Now that user is logged in, load recipes from DB
-  loadRecipesFromDB();
-}
-
-// Check if user is already logged in
-supabaseClient.auth.getSession().then(({ data: { session } }) => {
-  if (session) {
-    console.log("Already logged in:", session.user);
-    loadRecipesFromDB();
-  } else {
-    console.log("No active session. User must log in.");
-  }
-});
-
-// Optional: attach login to a form
-document.getElementById('login-form')?.addEventListener('submit', e => {
-  e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  login(email, password);
-});
-
-// TEMP: keep local DB for fallback
-const DB = {
-  recipes: JSON.parse(localStorage.getItem('bbq_recipes') || '[]'),
-  lessons: JSON.parse(localStorage.getItem('bbq_lessons') || '[]'),
-  cooks:   JSON.parse(localStorage.getItem('bbq_cooks')   || '[]'),
-};
-function save() {
-  localStorage.setItem('bbq_recipes', JSON.stringify(DB.recipes));
-  localStorage.setItem('bbq_lessons', JSON.stringify(DB.lessons));
-  localStorage.setItem('bbq_cooks',   JSON.stringify(DB.cooks));
-}
-
-let currentSection = 'recipes';
-let searchFilter = 'all';
-
-function showSection(id) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('sec-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
-  currentSection = id;
-  if (id === 'recipes') renderRecipes();
-  if (id === 'lessons') renderLessons();
-  if (id === 'cooks')   renderCooks();
-  if (id === 'search')  doSearch();
-}
-
-// ===== DB LOAD FUNCTION =====
-async function loadRecipesFromDB() {
-  const { data, error } = await supabaseClient
-    .from('recipes')
-    .select('*');
-  if (error) {
-    console.error("Failed to load recipes:", error.message);
-    return;
-  }
-  DB.recipes = data;
-  save();
-  renderRecipes();
-}
-</script>
-
-// -------- MODAL --------
-let currentModal = null;
-function openModal(type) {
-  currentModal = type;
-  document.getElementById('modal-overlay').classList.add('open');
-  document.getElementById('modal-recipe').style.display = type==='recipe' ? 'block' : 'none';
-  document.getElementById('modal-lesson').style.display = type==='lesson' ? 'block' : 'none';
-  document.getElementById('modal-cook').style.display   = type==='cook'   ? 'block' : 'none';
-  if (type === 'cook') {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('c-date').value = today;
-  }
-}
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  clearForms();
-}
-function closeModalOutside(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-}
-function clearForms() {
-  document.querySelectorAll('.form-input, .form-textarea, .form-select').forEach(el => el.value = '');
-}
-
-// -------- SAVE --------
-async function saveRecipe() {
-  const name = document.getElementById('r-name').value.trim();
-  if (!name) { alert('Please enter a recipe name.'); return; }
-
-  const newRecipe = {
-    name,
-    meat: document.getElementById('r-meat').value,
-    method: document.getElementById('r-method').value,
-    temp: document.getElementById('r-temp').value,
-    internal: document.getElementById('r-internal').value,
-    rub: document.getElementById('r-rub').value,
-    wood: document.getElementById('r-wood').value,
-    instructions: document.getElementById('r-instructions').value,
-    notes: document.getElementById('r-notes').value,
-    tags: document.getElementById('r-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
-    date: new Date().toISOString()
-  };
-
-  const { data, error } = await supabaseClient
-    .from('recipes')
-    .insert([newRecipe]);
-
-  if (error) {
-    alert("Error saving: " + error.message);
-    return;
-  }
-
-  closeModal();
-  loadRecipesFromDB(); // new function
-}
-
-function saveLesson() {
-  const title = document.getElementById('l-title').value.trim();
-  if (!title) { alert('Please enter a title.'); return; }
-  DB.lessons.unshift({
-    id: Date.now(), type: 'lesson',
-    title, category: document.getElementById('l-category').value,
-    impact: document.getElementById('l-impact').value,
-    what: document.getElementById('l-what').value,
-    lesson: document.getElementById('l-lesson').value,
-    source: document.getElementById('l-source').value,
-    tags: document.getElementById('l-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
-    date: new Date().toISOString()
-  });
-  save(); closeModal(); renderLessons();
-}
-
-function saveCook() {
-  const name = document.getElementById('c-name').value.trim();
-  if (!name) { alert('Please enter a cook name.'); return; }
-  DB.cooks.unshift({
-    id: Date.now(), type: 'cook',
-    name, date: document.getElementById('c-date').value,
-    duration: document.getElementById('c-duration').value,
-    meat: document.getElementById('c-meat').value,
-    smoker: document.getElementById('c-smoker').value,
-    temp: document.getElementById('c-temp').value,
-    finalTemp: document.getElementById('c-final-temp').value,
-    report: document.getElementById('c-report').value,
-    results: document.getElementById('c-results').value,
-    change: document.getElementById('c-change').value,
-    rating: document.getElementById('c-rating').value,
-    tags: document.getElementById('c-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
-  });
-  save(); closeModal(); renderCooks();
-}
-
-// -------- RENDER --------
-function stars(n) {
-  if (!n) return '';
-  return '★'.repeat(parseInt(n)) + '☆'.repeat(5-parseInt(n));
-}
-function fmtDate(d) {
-  if (!d) return '';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
-}
-function impactClass(i) {
-  return {'critical':'hot','high':'hot','medium':'','low':''}[i] || '';
-}
-
-function renderRecipes() {
-  const el = document.getElementById('recipes-cards');
-  const st = document.getElementById('recipes-stats');
-  const methods = [...new Set(DB.recipes.map(r=>r.method).filter(Boolean))];
-  st.innerHTML = `
-    <div class="stat-box"><div class="stat-num">${DB.recipes.length}</div><div class="stat-label">Recipes</div></div>
-    <div class="stat-box"><div class="stat-num">${[...new Set(DB.recipes.map(r=>r.meat).filter(Boolean))].length}</div><div class="stat-label">Cuts</div></div>
-    <div class="stat-box"><div class="stat-num">${methods.length}</div><div class="stat-label">Methods</div></div>
-  `;
-  if (!DB.recipes.length) { el.innerHTML = emptyState('No recipes yet — add your first one'); return; }
-  el.innerHTML = DB.recipes.map((r,i) => `
-    <div class="card" onclick="openDetail('recipe',${i})">
-      <div class="card-tag">Recipe</div>
-      <div class="card-title">${r.name}</div>
-      <div class="card-meta">${[r.meat,r.method].filter(Boolean).join(' · ')}</div>
-      <div class="card-body">${r.rub ? 'Rub: '+r.rub.substring(0,80) : (r.instructions || '').substring(0,80)}${r.instructions && r.instructions.length>80?'…':''}</div>
-      <div class="card-footer">
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${(r.tags||[]).slice(0,3).map(t=>`<span class="tag-pill">${t}</span>`).join('')}
-        </div>
-        <span class="card-meta">${r.wood||''}</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderLessons() {
-  const el = document.getElementById('lessons-cards');
-  const st = document.getElementById('lessons-stats');
-  const critical = DB.lessons.filter(l=>l.impact==='critical'||l.impact==='high').length;
-  st.innerHTML = `
-    <div class="stat-box"><div class="stat-num">${DB.lessons.length}</div><div class="stat-label">Lessons</div></div>
-    <div class="stat-box"><div class="stat-num">${critical}</div><div class="stat-label">High Impact</div></div>
-    <div class="stat-box"><div class="stat-num">${[...new Set(DB.lessons.map(l=>l.category).filter(Boolean))].length}</div><div class="stat-label">Categories</div></div>
-  `;
-  if (!DB.lessons.length) { el.innerHTML = emptyState('No lessons yet — every cook teaches you something'); return; }
-  el.innerHTML = DB.lessons.map((l,i) => `
-    <div class="card" onclick="openDetail('lesson',${i})">
-      <div class="card-tag">Lesson · ${l.category||'General'}</div>
-      <div class="card-title">${l.title}</div>
-      <div class="card-meta">${l.source||''} ${l.date?'· '+fmtDate(l.date):''}</div>
-      <div class="card-body">${(l.lesson||l.what||'').substring(0,100)}${(l.lesson||'').length>100?'…':''}</div>
-      <div class="card-footer">
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${(l.tags||[]).slice(0,3).map(t=>`<span class="tag-pill ${impactClass(l.impact)}">${t}</span>`).join('')}
-        </div>
-        ${l.impact ? `<span class="tag-pill ${impactClass(l.impact)}">${l.impact}</span>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderCooks() {
-  const el = document.getElementById('cooks-cards');
-  const st = document.getElementById('cooks-stats');
-  const avgRating = DB.cooks.filter(c=>c.rating).length
-    ? (DB.cooks.filter(c=>c.rating).reduce((a,c)=>a+parseInt(c.rating),0)/DB.cooks.filter(c=>c.rating).length).toFixed(1)
-    : '—';
-  st.innerHTML = `
-    <div class="stat-box"><div class="stat-num">${DB.cooks.length}</div><div class="stat-label">Cooks</div></div>
-    <div class="stat-box"><div class="stat-num">${avgRating}</div><div class="stat-label">Avg Rating</div></div>
-    <div class="stat-box"><div class="stat-num">${[...new Set(DB.cooks.map(c=>c.smoker).filter(Boolean))].length}</div><div class="stat-label">Smokers</div></div>
-  `;
-  if (!DB.cooks.length) { el.innerHTML = emptyState('No cooks logged — fire it up and report back'); return; }
-  el.innerHTML = DB.cooks.map((c,i) => `
-    <div class="card" onclick="openDetail('cook',${i})">
-      <div class="card-tag">Cook Report</div>
-      <div class="card-title">${c.name}</div>
-      <div class="card-meta">${[c.date?fmtDate(c.date):'', c.duration, c.meat].filter(Boolean).join(' · ')}</div>
-      <div class="card-body">${(c.report||'').substring(0,100)}${(c.report||'').length>100?'…':''}</div>
-      <div class="card-footer">
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${(c.tags||[]).slice(0,2).map(t=>`<span class="tag-pill">${t}</span>`).join('')}
-        </div>
-        ${c.rating ? `<span class="rating">${stars(c.rating)}</span>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-function emptyState(msg) {
-  return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔥</div><div class="empty-text">${msg}</div></div>`;
-}
-
-// -------- DETAIL --------
-function openDetail(type, idx) {
-  const item = type==='recipe' ? DB.recipes[idx] : type==='lesson' ? DB.lessons[idx] : DB.cooks[idx];
-  let html = '';
-  if (type === 'recipe') {
-    html = `
-      <div class="detail-header">
-        <div class="detail-tag">Recipe · ${item.method||''}</div>
-        <div class="detail-title">${item.name}</div>
-        <div class="detail-meta">
-          ${item.meat?'<span>'+item.meat+'</span>':''}
-          ${item.temp?'<span>Pit: '+item.temp+'</span>':''}
-          ${item.internal?'<span>Target: '+item.internal+'</span>':''}
-          ${item.wood?'<span>Wood: '+item.wood+'</span>':''}
-        </div>
-      </div>
-      ${item.rub?`<div class="detail-section-title">Rub & Seasoning</div><div class="detail-body">${item.rub}</div>`:''}
-      ${item.instructions?`<div class="detail-section-title">Instructions</div><div class="detail-body">${item.instructions}</div>`:''}
-      ${item.notes?`<div class="detail-section-title">Notes</div><div class="detail-body">${item.notes}</div>`:''}
-      ${(item.tags||[]).length?`<div class="detail-section-title">Tags</div><div style="display:flex;gap:6px;flex-wrap:wrap">${item.tags.map(t=>`<span class="tag-pill">${t}</span>`).join('')}</div>`:''}
-    `;
-  } else if (type === 'lesson') {
-    html = `
-      <div class="detail-header">
-        <div class="detail-tag">Lesson · ${item.category||'General'}</div>
-        <div class="detail-title">${item.title}</div>
-        <div class="detail-meta">
-          ${item.impact?'<span>Impact: '+item.impact+'</span>':''}
-          ${item.source?'<span>'+item.source+'</span>':''}
-          ${item.date?'<span>'+fmtDate(item.date)+'</span>':''}
-        </div>
-      </div>
-      ${item.what?`<div class="detail-section-title">What Happened</div><div class="detail-body">${item.what}</div>`:''}
-      ${item.lesson?`<div class="detail-section-title">The Lesson</div><div class="detail-body">${item.lesson}</div>`:''}
-      ${(item.tags||[]).length?`<div class="detail-section-title">Tags</div><div style="display:flex;gap:6px;flex-wrap:wrap">${item.tags.map(t=>`<span class="tag-pill">${t}</span>`).join('')}</div>`:''}
-    `;
-  } else {
-    html = `
-      <div class="detail-header">
-        <div class="detail-tag">Cook Report</div>
-        <div class="detail-title">${item.name}</div>
-        <div class="detail-meta">
-          ${item.date?'<span>'+fmtDate(item.date)+'</span>':''}
-          ${item.duration?'<span>'+item.duration+'</span>':''}
-          ${item.meat?'<span>'+item.meat+'</span>':''}
-          ${item.smoker?'<span>'+item.smoker+'</span>':''}
-          ${item.temp?'<span>Pit: '+item.temp+'</span>':''}
-          ${item.finalTemp?'<span>Final: '+item.finalTemp+'</span>':''}
-          ${item.rating?'<span>'+stars(item.rating)+'</span>':''}
-        </div>
-      </div>
-      ${item.report?`<div class="detail-section-title">The Cook</div><div class="detail-body">${item.report}</div>`:''}
-      ${item.results?`<div class="detail-section-title">Results & Tasting Notes</div><div class="detail-body">${item.results}</div>`:''}
-      ${item.change?`<div class="detail-section-title">What I'd Change Next Time</div><div class="detail-body">${item.change}</div>`:''}
-      ${(item.tags||[]).length?`<div class="detail-section-title">Tags</div><div style="display:flex;gap:6px;flex-wrap:wrap">${item.tags.map(t=>`<span class="tag-pill">${t}</span>`).join('')}</div>`:''}
-    `;
-  }
-  document.getElementById(type+'-detail-content').innerHTML = html;
-  document.getElementById(type+'-detail').classList.add('open');
-  document.getElementById(type+'s-list').classList.add('hidden');
-}
-
-function closeDetail(type) {
-  document.getElementById(type+'-detail').classList.remove('open');
-  document.getElementById(type+'s-list').classList.remove('hidden');
-}
-
-// -------- SEARCH --------
-function toggleFilter(btn, val) {
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  searchFilter = val;
-  doSearch();
-}
-
-function doSearch() {
-  const q = (document.getElementById('search-input').value || '').toLowerCase().trim();
-  const res = document.getElementById('search-results');
-  if (!q) { res.innerHTML = '<div class="no-results">Start typing to search across all your BBQ knowledge</div>'; return; }
-
-  function matches(item) {
-    const text = JSON.stringify(item).toLowerCase();
-    return text.includes(q);
-  }
-
-  const recipes = (searchFilter==='all'||searchFilter==='recipe') ? DB.recipes.filter(matches) : [];
-  const lessons = (searchFilter==='all'||searchFilter==='lesson') ? DB.lessons.filter(matches) : [];
-  const cooks   = (searchFilter==='all'||searchFilter==='cook')   ? DB.cooks.filter(matches) : [];
-
-  if (!recipes.length && !lessons.length && !cooks.length) {
-    res.innerHTML = `<div class="no-results">No results for "<strong style="color:var(--cream)">${q}</strong>"</div>`;
-    return;
-  }
-
-  let html = '';
-  if (recipes.length) {
-    html += `<div class="search-result-type">Recipes (${recipes.length})</div>`;
-    html += `<div class="cards-grid">` + recipes.map(r => `
-      <div class="card" onclick="goToDetail('recipe',${DB.recipes.indexOf(r)})">
-        <div class="card-tag">Recipe</div>
-        <div class="card-title">${highlight(r.name,q)}</div>
-        <div class="card-meta">${[r.meat,r.method].filter(Boolean).join(' · ')}</div>
-      </div>`).join('') + `</div>`;
-  }
-  if (lessons.length) {
-    html += `<div class="search-result-type">Lessons Learned (${lessons.length})</div>`;
-    html += `<div class="cards-grid">` + lessons.map(l => `
-      <div class="card" onclick="goToDetail('lesson',${DB.lessons.indexOf(l)})">
-        <div class="card-tag">Lesson · ${l.category||''}</div>
-        <div class="card-title">${highlight(l.title,q)}</div>
-        <div class="card-meta">${l.impact||''} ${l.source||''}</div>
-      </div>`).join('') + `</div>`;
-  }
-  if (cooks.length) {
-    html += `<div class="search-result-type">Cook Reports (${cooks.length})</div>`;
-    html += `<div class="cards-grid">` + cooks.map(c => `
-      <div class="card" onclick="goToDetail('cook',${DB.cooks.indexOf(c)})">
-        <div class="card-tag">Cook Report</div>
-        <div class="card-title">${highlight(c.name,q)}</div>
-        <div class="card-meta">${[c.date?fmtDate(c.date):'',c.meat].filter(Boolean).join(' · ')}</div>
-        ${c.rating?`<div class="rating">${stars(c.rating)}</div>`:''}
-      </div>`).join('') + `</div>`;
-  }
-  res.innerHTML = html;
-}
-
-function highlight(text, q) {
-  if (!q || !text) return text || '';
-  const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')', 'gi');
-  return text.replace(re, '<mark style="background:rgba(232,93,26,0.3);color:var(--ember-glow);border-radius:2px;padding:0 2px">$1</mark>');
-}
-
-function goToDetail(type, idx) {
-  showSection(type+'s');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
-    if(['recipes','lessons','cooks','search'][i] === type+'s') b.classList.add('active');
-    else b.classList.remove('active');
-  });
-  setTimeout(() => openDetail(type, idx), 50);
-}
-
-async function loadRecipesFromDB() {
-  const { data, error } = await supabaseClient
-    .from('recipes')
-    .select('*')
-    .order('date', { ascending: false });
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  DB.recipes = data;
-  renderRecipes();
-}
-
-// Init
-loadRecipesFromDB();
-renderLessons();
-renderCooks();
-</script>
+    // ===== RENDER FUNCTIONS =====
+    function renderRecipes() {
+      const sec = document.getElementById('sec-recipes');
+      sec.innerHTML = DB.recipes.map(r => `<h3>${r.name}</h3><p>${r.description}</p>`).join('');
+    }
+    function renderLessons() {
+      const sec = document.getElementById('sec-lessons');
+      sec.innerHTML = DB.lessons.map(l => `<h3>${l.title}</h3><p>${l.content}</p>`).join('');
+    }
+    function renderCooks() {
+      const sec = document.getElementById('sec-cooks');
+      sec.innerHTML = DB.cooks.map(c => `<h3>${c.name}</h3><p>${c.bio}</p>`).join('');
+    }
+    function doSearch() {
+      const sec = document.getElementById('sec-search');
+      sec.innerHTML = '<p>Search feature coming soon...</p>';
+    }
+  </script>
 </body>
 </html>
